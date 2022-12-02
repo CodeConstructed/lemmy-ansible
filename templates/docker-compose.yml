@@ -22,10 +22,13 @@ services:
     environment:
       - LEMMY_UI_LEMMY_INTERNAL_HOST=lemmy:8536
       - LEMMY_UI_LEMMY_EXTERNAL_HOST={{ domain }}
+      - LEMMY_UI_LEMMY_WS_HOST=
       - LEMMY_UI_HTTPS=true
+      - LEMMY_UI_DEBUG=false
+      - LEMMY_UI_EXTRA_THEMES_FOLDER=./extra_themes
     volumes:
       - ./volumes/lemmy-ui/extra_themes:/app/extra_themes
-    depends_on: 
+    depends_on:
       - lemmy
 
   postgres:
@@ -34,6 +37,11 @@ services:
       - POSTGRES_USER=lemmy
       - POSTGRES_PASSWORD={{ postgres_password }}
       - POSTGRES_DB=lemmy
+    healthcheck:
+      test: pg_isready -d $${POSTGRES_DB} -U $${POSTGRES_USER}
+      interval: 10s
+      timeout: 5s
+      retries: 5
     volumes:
       - ./volumes/postgres:/var/lib/postgresql/data
       - ./customPostgresql.conf:/etc/postgresql.conf
@@ -53,4 +61,4 @@ services:
     image: mwader/postfix-relay
     environment:
       - POSTFIX_myhostname={{ domain }}
-    restart: "always"
+    restart: always
