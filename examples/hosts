@@ -12,3 +12,4 @@ myuser@example.com  domain=example.com  letsencrypt_contact_email=your@email.com
 
 [all:vars]
 ansible_connection=ssh
+aws_region_smtp=email-smtp.us-west-2.amazonaws.com
