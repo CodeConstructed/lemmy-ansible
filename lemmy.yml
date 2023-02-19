@@ -49,6 +49,9 @@
         owner: 'root'
       - path: '{{lemmy_base_dir}}/{{domain}}/volumes/'
         owner: 'root'
+      - path: '{{lemmy_base_dir}}/{{domain}}/secrets/'
+        mode: '0600'
+        owner: 'root'
       - path: '{{lemmy_base_dir}}/{{domain}}/volumes/pictrs/'
         owner: '991'
 
@@ -70,9 +73,12 @@
         - src: 'templates/nginx.conf'
           dest: '/etc/nginx/sites-available/{{domain}}.conf'
           mode: '0644'
+        - src: 'templates/sasl_secret'
+          dest: '{{lemmy_base_dir}}/{{domain}}/secrets/sasl_username_password'
+          mode: '0600'
       vars:
         lemmy_docker_image: "dessalines/lemmy:{{ lemmy_version | default( lookup('file', 'VERSION') )}}"
-        lemmy_docker_ui_image: "dessalines/lemmy-ui:{{ lemmy_ui_version | default(lemmy_version | default(lookup('file', 'VERSION')))}}"
+        lemmy_docker_ui_image: "ghcr.io/codeconstructed/lemmy-ui:{{ lemmy_ui_version | default(lemmy_version | default(lookup('file', 'VERSION')))}}"
 
     - block:
       - name: gather stats on site enabled config
@@ -91,7 +97,7 @@
           src: '../sites-available/{{domain}}.conf'
           dest: "/etc/nginx/sites-enabled/{{domain}}.conf"
           state: link
-          
+
     - name: add the config.hjson
       template:
         src: 'inventory/host_vars/{{domain}}/config.hjson'
@@ -101,6 +107,8 @@
         group: '1000'
     vars:
       postgres_password: "{{ lookup('password', 'inventory/host_vars/{{domain}}/passwords/postgres chars=ascii_letters,digits') }}"
+      admin_password: "{{ lookup('password', 'inventory/host_vars/{{domain}}/passwords/admin chars=ascii_letters,digits') }}"
+      sasl_username_password: "{{ lookup('password', 'inventory/host_vars/{{domain}}/passwords/sasl') }}"
 
   - name: enable and start docker service
     systemd:
@@ -113,7 +121,7 @@
   #     cmd: find .                    # To list files under /opt directory
   #     chdir: /opt                    # changes to /opt directory
   #     register: shell_output
-  # - debug: var=shell_output     
+  # - debug: var=shell_output
 
   - name: start docker-compose
     docker_compose:
@@ -131,3 +139,10 @@
       name: certbot-renew-lemmy
       user: root
       job: "certbot certonly --nginx --cert-name '{{ domain }}' -d '{{ domain }}' --deploy-hook 'nginx -s reload'"
+
+  - name: lemmy database backup cronjob
+    cron:
+      special_time: daily
+      name: lemmy-database-backup
+      user: root
+      job: "docker exec postgres /usr/local/bin/pg_dump --dbname=lemmy --username=lemmy --file=/var/lib/postgresql/data/backups/$$(date -Iminutes)-lemmy.sql"

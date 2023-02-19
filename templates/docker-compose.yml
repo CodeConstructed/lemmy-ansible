@@ -23,6 +23,12 @@ services:
       - LEMMY_INTERNAL_HOST=lemmy:8536
       - LEMMY_EXTERNAL_HOST={{ domain }}
       - LEMMY_HTTPS=true
+      - LEMMY_UI_LEMMY_INTERNAL_HOST=lemmy:8536
+      - LEMMY_UI_LEMMY_EXTERNAL_HOST={{ domain }}
+      - LEMMY_UI_LEMMY_WS_HOST=
+      - LEMMY_UI_HTTPS=true
+      - LEMMY_UI_DEBUG=false
+      - LEMMY_UI_EXTRA_THEMES_FOLDER=./extra_themes
     volumes:
       - ./volumes/lemmy-ui/extra_themes:/app/extra_themes
     depends_on: 
@@ -30,10 +36,16 @@ services:
 
   postgres:
     image: postgres:12-alpine
+    container_name: postgres
     environment:
       - POSTGRES_USER=lemmy
       - POSTGRES_PASSWORD={{ postgres_password }}
       - POSTGRES_DB=lemmy
+    healthcheck:
+      test: pg_isready -d $${POSTGRES_DB} -U $${POSTGRES_USER}
+      interval: 10s
+      timeout: 5s
+      retries: 5
     volumes:
       - ./volumes/postgres:/var/lib/postgresql/data
     restart: always
@@ -48,8 +60,24 @@ services:
     restart: always
     mem_limit: 200m
 
+  # TODO: add SASL password to secrets so it doesn't appear in the docker readouts.
   postfix:
     image: mwader/postfix-relay
     environment:
       - POSTFIX_myhostname={{ domain }}
-    restart: "always"
+      - TZ=Europe/Frankfurt
+      - POSTFIX_relayhost=[{{ aws_region_smtp }}]:587
+      - POSTFIX_smtp_sasl_auth_enable=yes
+      - POSTFIX_smtp_sasl_security_options=noanonymous
+      - POSTFIX_smtp_sasl_password_maps=hash:/etc/postfix/sasl_aws_config
+      - POSTFIX_smtp_tls_security_level=encrypt
+      - POSTFIX_smtp_use_tls=yes
+      - POSTFIX_smtp_tls_note_starttls_offer=yes
+      - POSTFIX_smtp_tls_CAfile=/etc/ssl/certs/ca-certificates.crt
+      - POSTFIX_default_database_type=hash
+      - "POSTMAP_sasl_aws_config=[{{ aws_region_smtp }}]:587 {{ sasl_username_password }}"
+    restart: always
+
+secrets:
+  sasl_username_password:
+    file: ./secrets/sasl_username_password
