@@ -1,4 +1,4 @@
-version: '2'
+version: '3.3'
 
 services:
   lemmy:
@@ -58,7 +58,10 @@ services:
     volumes:
       - ./volumes/pictrs:/mnt
     restart: always
-    mem_limit: 200m
+    deploy:
+      resources:
+        limits:
+          memory: 200m
 
   # TODO: add SASL password to secrets so it doesn't appear in the docker readouts.
   postfix:
