@@ -149,6 +149,7 @@
       postgres_password: "{{ lookup('password', 'inventory/host_vars/{{domain}}/passwords/postgres chars=ascii_letters,digits') }}"
       admin_password: "{{ lookup('password', 'inventory/host_vars/{{domain}}/passwords/admin chars=ascii_letters,digits') }}"
       sasl_username_password: "{{ lookup('password', 'inventory/host_vars/{{domain}}/passwords/sasl') }}"
+      juno_apikey: "{{ lookup('password', 'inventory/host_vars/{{domain}}/passwords/juno') }}"
 
   - name: enable and start docker service
     systemd:

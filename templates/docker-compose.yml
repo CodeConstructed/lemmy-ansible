@@ -30,6 +30,7 @@ services:
       - LEMMY_UI_HTTPS=true
       - LEMMY_UI_DEBUG=false
       - LEMMY_UI_EXTRA_THEMES_FOLDER=./extra_themes
+      - JUNO_APIKEY={{ juno_apikey }}
     volumes:
       - ./volumes/lemmy-ui/extra_themes:/app/extra_themes
     depends_on: 
